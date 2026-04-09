@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ─────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-surface-900 text-slate-100 font-sans;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(79, 70, 229, 0.06) 0%, transparent 60%);
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-surface-800; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-500 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-brand-500; }
+}
+
+/* ── Components ───────────────────────────────────────────────── */
+@layer components {
+  /* Glass card */
+  .glass {
+    @apply bg-surface-800/60 backdrop-blur-sm border border-white/5 rounded-2xl;
+  }
+  .glass-hover {
+    @apply glass transition-all duration-300 hover:bg-surface-700/60 hover:border-brand-500/20 hover:shadow-lg hover:shadow-brand-500/5;
+  }
+
+  /* Severity badges */
+  .badge-critical {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-red-500/15 text-red-400 border border-red-500/25;
+  }
+  .badge-warning {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-amber-500/15 text-amber-400 border border-amber-500/25;
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-blue-500/15 text-blue-400 border border-blue-500/25;
+  }
+
+  /* Status pills */
+  .status-queued   { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-700 text-slate-300; }
+  .status-running  { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-brand-700/40 text-brand-300; }
+  .status-complete { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-900/40 text-emerald-400; }
+  .status-failed   { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-900/40 text-red-400; }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+           bg-gradient-to-r from-brand-600 to-brand-500 text-white
+           hover:from-brand-500 hover:to-brand-400
+           transition-all duration-200 shadow-lg shadow-brand-600/25
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+           bg-surface-700 text-slate-300 border border-white/10
+           hover:bg-surface-600 hover:text-white
+           transition-all duration-200;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm
+           bg-red-900/30 text-red-400 border border-red-500/20
+           hover:bg-red-900/60 hover:text-red-300
+           transition-all duration-200;
+  }
+
+  /* Input */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl bg-surface-700/50 border border-white/10 text-slate-100
+           placeholder-slate-500 text-sm font-mono
+           focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50
+           transition-all duration-200;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply glass p-5 flex flex-col gap-1;
+  }
+
+  /* Tool pill */
+  .tool-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono
+           bg-surface-600 text-slate-400 border border-white/5;
+  }
+}
+
+/* ── Utilities ────────────────────────────────────────────────── */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent;
+  }
+  .glow-brand {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+  .animate-fade-in  { animation: fadeIn  0.4s ease-out; }
+  .animate-slide-up { animation: slideUp 0.4s ease-out; }
+}
+
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Scan progress animation ──────────────────────────────────── */
+.scan-pulse {
+  animation: scanPulse 2s ease-in-out infinite;
+}
+@keyframes scanPulse {
+  0%, 100% { opacity: 0.6; transform: scaleX(0.95); }
+  50%       { opacity: 1;   transform: scaleX(1); }
+}

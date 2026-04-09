@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: trustify_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: trustify
+    networks:
+      - trustify_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trustify_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/trustify
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - WORKSPACE_DIR=/tmp/trustify_workspaces
+      - ENVIRONMENT=development
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # Docker-out-of-Docker
+      - workspace_data:/tmp/trustify_workspaces
+      - ./backend:/app
+    depends_on:
+      - mongodb
+    networks:
+      - trustify_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trustify_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - trustify_net
+
+volumes:
+  mongo_data:
+  workspace_data:
+
+networks:
+  trustify_net:
+    driver: bridge
