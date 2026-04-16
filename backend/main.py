@@ -7,6 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from config import settings
 from routers import scans, findings
+from auth.router import router as auth_router
 
 
 @asynccontextmanager
@@ -37,8 +38,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(scans.router, prefix="/api/scans", tags=["Scans"])
+app.include_router(scans.router,    prefix="/api/scans",    tags=["Scans"])
 app.include_router(findings.router, prefix="/api/findings", tags=["Findings"])
+app.include_router(auth_router,     prefix="/api/auth",     tags=["Auth"])
 
 
 @app.get("/api/health")

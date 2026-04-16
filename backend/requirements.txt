@@ -12,3 +12,10 @@ gitpython==3.1.43             # GitHub cloning
 python-dotenv==1.0.1
 semgrep==1.70.0
 pylint==3.1.0
+fpdf2==2.7.9                  # PDF generation
+python-jose[cryptography]==3.3.0  # JWT
+passlib[bcrypt]==1.7.4            # password hashing
+bcrypt==3.2.0                     # fix passlib compatibility
+authlib==1.3.0                    # OAuth (Google)
+dnspython==2.6.1                  # SRV support for Atlas
+certifi==2024.2.2                 # root certificates for Atlas

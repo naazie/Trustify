@@ -5,6 +5,25 @@ const api = axios.create({
   timeout: 60000,
 })
 
+// Attach JWT token to every request automatically
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// Redirect to /auth on 401
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token')
+      window.location.href = '/auth'
+    }
+    return Promise.reject(err)
+  }
+)
+
 // ── Scans ──────────────────────────────────────────────────────
 export const createScan = (payload) =>
   api.post('/scans', payload).then((r) => r.data)
@@ -36,8 +55,9 @@ export const downloadReport = async (scanId, format = 'json') => {
     params: { format },
     responseType: 'blob',
   })
-  const ext = format === 'html' ? 'html' : 'json'
-  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const ext = format === 'html' ? 'html' : format === 'pdf' ? 'pdf' : 'json'
+  const mime = format === 'pdf' ? 'application/pdf' : format === 'html' ? 'text/html' : 'application/json'
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: mime }))
   const a = document.createElement('a')
   a.href = url
   a.download = `trustify-report-${scanId.slice(0, 8)}.${ext}`

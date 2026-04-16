@@ -22,6 +22,7 @@ export default function ScanDetail() {
   const [toolFilter, setToolFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [downloading, setDownloading] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -61,6 +62,11 @@ export default function ScanDetail() {
   const handleDownloadJSON = async () => {
     setDownloading(true)
     try { await downloadReport(id, 'json') } finally { setDownloading(false) }
+  }
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true)
+    try { await downloadReport(id, 'pdf') } finally { setDownloadingPdf(false) }
   }
 
   if (loading) return <LoadingSpinner message="Loading scan results..." />
@@ -116,6 +122,15 @@ export default function ScanDetail() {
                   {downloading
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Downloading…</>
                     : <><Download className="w-4 h-4" /> Download JSON</>}
+                </button>
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors font-semibold disabled:opacity-50 shadow-sm"
+                >
+                  {downloadingPdf
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+                    : <><Download className="w-4 h-4" /> Download PDF</>}
                 </button>
               </>
             )}

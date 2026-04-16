@@ -8,12 +8,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 
 from models.scan import ScanCreate, ScanResponse, ScanSummary
 from services.orchestrator import JobOrchestrator
+from auth.utils import get_current_user, get_db
 
 router = APIRouter()
-
-
-def get_db(request: Request):
-    return request.app.state.db
 
 
 # ── POST /api/scans  (GitHub URL) ────────────────────────────────────────────
@@ -22,11 +19,13 @@ async def create_scan(
     payload: ScanCreate,
     background_tasks: BackgroundTasks,
     db=Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     if payload.source_type == "github" and not payload.source_url:
         raise HTTPException(400, "source_url is required for github scans")
 
     doc = {
+        "user_id": str(current_user["_id"]),
         "source_type": payload.source_type,
         "source_url": payload.source_url,
         "source_filename": None,
@@ -61,12 +60,14 @@ async def upload_scan(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db=Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     if not file.filename.endswith(".zip"):
         raise HTTPException(400, "Only .zip files are supported")
 
     file_bytes = await file.read()
     doc = {
+        "user_id": str(current_user["_id"]),
         "source_type": "zip",
         "source_url": None,
         "source_filename": file.filename,
@@ -97,24 +98,39 @@ async def upload_scan(
 
 # ── GET /api/scans ────────────────────────────────────────────────────────────
 @router.get("", response_model=List[ScanResponse])
-async def list_scans(db=Depends(get_db), skip: int = 0, limit: int = 20):
-    cursor = db.scans.find().sort("created_at", -1).skip(skip).limit(limit)
+async def list_scans(
+    db=Depends(get_db),
+    current_user=Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 20,
+):
+    cursor = (
+        db.scans.find({"user_id": str(current_user["_id"])})
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
     scans = await cursor.to_list(length=limit)
     return [_to_response(s) for s in scans]
 
 
 # ── GET /api/scans/:id ────────────────────────────────────────────────────────
 @router.get("/{scan_id}", response_model=ScanResponse)
-async def get_scan(scan_id: str, db=Depends(get_db)):
+async def get_scan(scan_id: str, db=Depends(get_db), current_user=Depends(get_current_user)):
     scan = await db.scans.find_one({"_id": ObjectId(scan_id)})
     if not scan:
         raise HTTPException(404, "Scan not found")
+    if scan.get("user_id") and scan["user_id"] != str(current_user["_id"]):
+        raise HTTPException(403, "Access denied")
     return _to_response(scan)
 
 
 # ── DELETE /api/scans/:id ─────────────────────────────────────────────────────
 @router.delete("/{scan_id}", status_code=204)
-async def delete_scan(scan_id: str, db=Depends(get_db)):
+async def delete_scan(scan_id: str, db=Depends(get_db), current_user=Depends(get_current_user)):
+    scan = await db.scans.find_one({"_id": ObjectId(scan_id)})
+    if scan and scan.get("user_id") and scan["user_id"] != str(current_user["_id"]):
+        raise HTTPException(403, "Access denied")
     await db.scans.delete_one({"_id": ObjectId(scan_id)})
     await db.findings.delete_many({"scan_id": scan_id})
 
