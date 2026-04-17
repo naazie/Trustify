@@ -45,14 +45,19 @@ class IngestionService:
         self.workspace_base.mkdir(parents=True, exist_ok=True)
 
     # ─── GitHub Clone ─────────────────────────────────────────────────────────
-    def ingest_github(self, url: str, scan_id: str) -> Path:
+    def ingest_github(self, url: str, scan_id: str, token: Optional[str] = None) -> Path:
         target = self.workspace_base / scan_id
         if target.exists():
             shutil.rmtree(target)
         target.mkdir(parents=True)
 
-        print(f"[Ingestion] Cloning {url} → {target}")
-        git.Repo.clone_from(url, str(target), depth=1)
+        clone_url = url
+        if token and "github.com" in url:
+            # Inject token into URL: https://<token>@github.com/owner/repo.git
+            clone_url = url.replace("https://", f"https://{token}@")
+
+        print(f"[Ingestion] Cloning {url} (auth={bool(token)}) → {target}")
+        git.Repo.clone_from(clone_url, str(target), depth=1)
         return target
 
     # ─── ZIP Extraction ───────────────────────────────────────────────────────

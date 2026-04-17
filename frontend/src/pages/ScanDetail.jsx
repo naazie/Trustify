@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { getScan, getFindings, getReportUrl, downloadReport } from '../api/client'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { getScan, getFindings, getReportUrl, downloadReport, createScan, listScans } from '../api/client'
 import RiskChart from '../components/RiskChart'
 import FindingRow from '../components/FindingRow'
 import CodeViewer from '../components/CodeViewer'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { format } from 'date-fns'
-import { ArrowLeft, FileText, Download, Loader2 } from 'lucide-react'
+import { ArrowLeft, FileText, Download, Loader2, Play, History, Calendar, CheckCircle2, XCircle, Zap } from 'lucide-react'
 
 const VIEWS = ['Findings', 'File Drilldown']
 const SEVERITY_FILTERS = ['all', 'critical', 'warning', 'info']
@@ -14,6 +14,7 @@ const TYPE_FILTERS = ['all', 'SECURITY', 'SECRET', 'CODE_QUALITY', 'DEPENDENCY']
 
 export default function ScanDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [scan, setScan]           = useState(null)
   const [findings, setFindings]   = useState([])
   const [loading, setLoading]     = useState(true)
@@ -23,12 +24,18 @@ export default function ScanDetail() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [downloading, setDownloading] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [history, setHistory] = useState([])
 
   const fetchData = useCallback(async () => {
     try {
       const [scanData, findData] = await Promise.all([getScan(id), getFindings(id)])
       setScan(scanData)
       setFindings(findData)
+      
+      if (scanData.source_url) {
+        const hist = await listScans({ source_url: scanData.source_url, limit: 10 })
+        setHistory(hist.filter(h => h.id !== id))
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -69,6 +76,17 @@ export default function ScanDetail() {
     try { await downloadReport(id, 'pdf') } finally { setDownloadingPdf(false) }
   }
 
+  const handleRescan = async () => {
+    if (!scan.source_url) return
+    try {
+      await createScan({ source_type: 'github', source_url: scan.source_url })
+      alert('New scan initiated for latest commit!')
+      navigate('/')
+    } catch (e) {
+      alert('Failed to initiate re-scan: ' + (e.response?.data?.detail || 'Unknown error'))
+    }
+  }
+
   if (loading) return <LoadingSpinner message="Loading scan results..." />
   if (!scan)   return <div className="text-center py-20 text-slate-500 font-medium">Scan not found</div>
 
@@ -102,6 +120,16 @@ export default function ScanDetail() {
               {isRunning && <span className="inline-block w-2 h-2 rounded-full bg-current animate-pulse" />}
               {scan.status.charAt(0).toUpperCase() + scan.status.slice(1)}
             </div>
+
+            {/* Re-scan button — for github only */}
+            {scan.source_type === 'github' && !isRunning && (
+              <button
+                onClick={handleRescan}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors font-semibold shadow-sm"
+              >
+              <Play className="w-4 h-4 fill-current" /> Scan Latest Commit
+              </button>
+            )}
 
             {/* Report buttons — only when complete */}
             {scan.status === 'complete' && (
@@ -158,41 +186,82 @@ export default function ScanDetail() {
 
       {/* Metrics row */}
       {scan.status === 'complete' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="glass p-5">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Risk Overview</p>
-            <RiskChart summary={scan.summary} />
-          </div>
-          <div className="md:col-span-3 grid grid-cols-3 gap-4">
-            {[
-              { label: 'Critical', val: scan.summary.critical, color: 'text-red-600',   bg: 'from-red-50',   border: 'border-l-red-400'   },
-              { label: 'Warning',  val: scan.summary.warning,  color: 'text-amber-600', bg: 'from-amber-50', border: 'border-l-amber-400' },
-              { label: 'Info',     val: scan.summary.info,     color: 'text-blue-600',  bg: 'from-blue-50',  border: 'border-l-blue-400'  },
-            ].map(({ label, val, color, bg, border }) => (
-              <div key={label} className={`glass p-5 bg-gradient-to-br ${bg} to-white border-l-4 ${border}`}>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">{label}</p>
-                <p className={`text-4xl font-extrabold ${color}`}>{val}</p>
-              </div>
-            ))}
-            <div className="glass p-5 col-span-3">
-              <div className="flex gap-8 flex-wrap">
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Languages Detected</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {scan.languages.map((l) => <span key={l} className="tool-badge">{l}</span>)}
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="glass p-5">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Risk Overview</p>
+              <RiskChart summary={scan.summary} />
+            </div>
+            <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { label: 'Critical', val: scan.summary.critical, color: 'text-red-600',   bg: 'from-red-50',   border: 'border-l-red-400'   },
+                { label: 'Warning',  val: scan.summary.warning,  color: 'text-amber-600', bg: 'from-amber-50', border: 'border-l-amber-400' },
+                { label: 'Info',     val: scan.summary.info,     color: 'text-blue-600',  bg: 'from-blue-50',  border: 'border-l-blue-400'  },
+              ].map(({ label, val, color, bg, border }) => (
+                <div key={label} className={`glass p-5 bg-gradient-to-br ${bg} to-white border-l-4 ${border}`}>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">{label}</p>
+                  <p className={`text-4xl font-extrabold ${color}`}>{val}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Tools Executed</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {scan.tools_run.map((t) => (
-                      <span key={t} className="tool-badge">{t}</span>
-                    ))}
+              ))}
+              <div className="glass p-5 md:col-span-3">
+                <div className="flex gap-8 flex-wrap">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Languages Detected</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {scan.languages.map((l) => <span key={l} className="tool-badge">{l}</span>)}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Tools Executed</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {scan.tools_run.map((t) => (
+                        <span key={t} className="tool-badge">{t}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Sidebar History */}
+          {history.length > 0 && (
+            <div className="glass p-5 flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-4">
+                <History className="w-4 h-4 text-brand-600" />
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Version History</h3>
+              </div>
+              <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar flex-1">
+                {history.map((h) => (
+                  <Link 
+                    key={h.id} 
+                    to={`/scan/${h.id}`}
+                    className="block p-3 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-all group"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {format(new Date(h.created_at), 'MMM d, HH:mm')}
+                      </span>
+                      {h.status === 'complete' ? (
+                        <div className="flex gap-1 items-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span className="text-[10px] font-bold text-red-600">{h.summary.critical}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 capitalize">{h.status}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 group-hover:text-brand-700 truncate">
+                        Scan #{h.id.slice(-4).toUpperCase()}
+                      </span>
+                      <ArrowLeft className="w-3 h-3 text-slate-300 group-hover:text-brand-500 transition-all rotate-180" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -33,8 +33,8 @@ export const uploadScan = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then((r) => r.data)
 
-export const listScans = (skip = 0, limit = 20) =>
-  api.get('/scans', { params: { skip, limit } }).then((r) => r.data)
+export const listScans = (params = {}) =>
+  api.get('/scans', { params }).then((r) => r.data)
 
 export const getScan = (id) =>
   api.get(`/scans/${id}`).then((r) => r.data)
@@ -66,5 +66,9 @@ export const downloadReport = async (scanId, format = 'json') => {
   a.remove()
   window.URL.revokeObjectURL(url)
 }
+
+// ── GitHub ─────────────────────────────────────────────────────
+export const listGithubRepos = () =>
+  api.get('/auth/github/repos').then((r) => r.data)
 
 export default api

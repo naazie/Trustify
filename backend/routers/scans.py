@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List
+from typing import List, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
@@ -41,6 +41,8 @@ async def create_scan(
     scan_id = str(result.inserted_id)
 
     orchestrator = JobOrchestrator(db)
+    github_token = current_user.get("github_token") if payload.source_type == "github" else None
+
     background_tasks.add_task(
         orchestrator.run_scan,
         scan_id=scan_id,
@@ -48,6 +50,7 @@ async def create_scan(
         source_url=payload.source_url,
         file_bytes=None,
         filename=None,
+        github_token=github_token,
     )
 
     doc["_id"] = scan_id
@@ -103,9 +106,14 @@ async def list_scans(
     current_user=Depends(get_current_user),
     skip: int = 0,
     limit: int = 20,
+    source_url: Optional[str] = None,
 ):
+    query = {"user_id": str(current_user["_id"])}
+    if source_url:
+        query["source_url"] = source_url
+        
     cursor = (
-        db.scans.find({"user_id": str(current_user["_id"])})
+        db.scans.find(query)
         .sort("created_at", -1)
         .skip(skip)
         .limit(limit)

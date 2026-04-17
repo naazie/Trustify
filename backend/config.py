@@ -18,7 +18,12 @@ class Settings(BaseSettings):
     # Google OAuth
     google_client_id: str = ""
     google_client_secret: str = ""
-    frontend_url: str = "http://localhost:3000"
+
+    # GitHub OAuth
+    github_client_id: str = ""
+    github_client_secret: str = ""
+
+    frontend_url: str = "http://localhost:5173"
 
     # Tool Docker image tags
     semgrep_image: str = "returntocorp/semgrep:latest"

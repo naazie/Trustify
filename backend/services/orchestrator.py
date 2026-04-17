@@ -52,6 +52,7 @@ class JobOrchestrator:
         source_url: Optional[str],
         file_bytes: Optional[bytes],
         filename: Optional[str],
+        github_token: Optional[str] = None,
     ):
         print(f"\n{'='*60}")
         print(f"[Orchestrator] Starting scan {scan_id}")
@@ -64,7 +65,7 @@ class JobOrchestrator:
 
             # 2. Ingest
             if source_type == "github":
-                workspace = self.ingestion.ingest_github(source_url, scan_id)
+                workspace = self.ingestion.ingest_github(source_url, scan_id, token=github_token)
             else:
                 workspace = self.ingestion.ingest_zip(file_bytes, scan_id)
 

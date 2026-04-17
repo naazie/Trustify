@@ -44,8 +44,12 @@ export function AuthProvider({ children }) {
     window.location.href = '/api/auth/google'
   }
 
+  const githubLogin = () => {
+    window.location.href = '/api/auth/github'
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, googleLogin }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, googleLogin, githubLogin }}>
       {children}
     </AuthContext.Provider>
   )
